@@ -1,0 +1,12 @@
+---
+# handlers file for redis_role
+- name: Start Redis
+  service:
+    name: redis
+    state: started
+    enabled: true
+    
+- name: Restart Redis
+  ansible.builtin.service:
+    name: redis
+    state: restarted
