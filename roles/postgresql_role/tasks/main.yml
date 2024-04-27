@@ -1,0 +1,49 @@
+---
+# tasks file for postgresql_role
+- name: Install ACL
+  ansible.builtin.package:
+    name: acl
+    state: present
+    
+- name: Install PostgreSQL
+  ansible.builtin.package:
+    name: postgresql-server
+    state: present
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Install PostgreSQL
+  ansible.builtin.package:
+    name: postgresql
+    state: present
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: check if directory exists
+  ansible.builtin.find:
+    path: /var/lib/pgsql/data/
+
+  register: pgsql_test
+  when: ansible_facts['os_family'] == "RedHat"
+- name: initialize PostgreSQL
+  become: true
+  ansible.builtin.command: 
+    "postgresql-setup --initdb"
+  when: 
+    - ansible_facts['os_family'] == "RedHat"
+    - pgsql_test.matched == 0
+
+- name: Start PostgreSQL
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: true
+    
+- name: Test PostgreSQL
+  become: true
+  become_user: postgres
+  ansible.builtin.shell: |
+    psql -c "SELECT version();"
+  register: postgresql_version
+
+- name: Print PostgreSQL version
+  ansible.builtin.debug:
+    msg: "{{ postgresql_version.stdout }}"  

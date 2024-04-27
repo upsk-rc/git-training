@@ -1,0 +1,42 @@
+---
+- name: Install Redis
+  ansible.builtin.yum:
+    name: redis
+    state: present
+  when: ansible_facts['os_family'] == "RedHat"
+  register: redis_installed
+  changed_when: redis_installed.rc == 0
+  notify:
+    - Start Redis
+
+- name: Install Redis
+  ansible.builtin.apt:
+    name: redis-server
+    state: present
+  register: redis_installed
+  changed_when: not redis_installed.failed
+  when: ansible_facts['os_family'] == "Debian"
+  notify:
+    - Start Redis
+    
+- name: Configure Redis
+  ansible.builtin.replace:
+    path: /etc/redis/redis.conf
+    regexp: '^# requirepass foobared'
+    replace: 'requirepass {{ redis_password }}'
+    backup: yes
+  notify:
+    - Restart Redis
+
+- name: Force handler execution
+  meta: flush_handlers 
+
+- name: Test Redis
+  ansible.builtin.command: redis-cli -a {{ redis_password }} ping
+  register: redis_ping
+
+- name: Print Redis ping
+  ansible.builtin.debug:
+    msg: "{{ redis_ping.stdout }}"
+
+
